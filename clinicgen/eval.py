@@ -14,12 +14,12 @@ from stanza import Pipeline
 from tqdm import tqdm
 from clinicgen.data.image2text import ToTokenizedTexts
 from clinicgen.nli import BERTScorer, SimpleNLI
+from clinicgen.chexbert import CheXbertScorer
 from clinicgen.utils import data_cuda, RecoverWords
 from clinicgen.external.bleu.bleu import Bleu
 from clinicgen.external.cider.cider import Cider, CiderScorer
 from clinicgen.external.rouge.rouge import Rouge
 from clinicgen.external.spice.spice import Spice
-
 
 class EntityMatcher:
     DOC_SEPARATOR = 'DOCSEP'
@@ -238,8 +238,7 @@ class EntityMatcher:
         mean_exact_e = np.mean(scores_e)
         mean_exact_n = np.mean(scores_n)
         return mean_exact_e, scores_e, mean_exact_n, scores_n
-
-
+    
 class GenEval:
     EVAL_ID = 'id'
     EVAL_REPORT = 'report'
@@ -258,7 +257,7 @@ class GenEval:
                  bert_score=None, bert_score_penalty=False, nli=None, nli_compare=None, nli_label='entailment',
                  nli_neutral_score=(1.0 / 3), nli_prf='f', nli_batch=16, nli_cache=None, entity_match=None,
                  entity_mode='exact', beam_diversity=0.0, nucleus_p=None, nthreads=2, pin_memory=False,
-                 sentsplitter='nltk', verbose=False):
+                 sentsplitter='nltk', verbose=False, chexbert=True):
         self.model = model
         self.recover_words = RecoverWords(word_indexes)
         self.beam_size = beam_size
@@ -290,6 +289,9 @@ class GenEval:
         self.bert_score_model = None
         self.entity_matcher = None
         self.device = 'cpu'
+        
+        self.chexbert = chexbert
+        self.chexbert_model = None
 
     @classmethod
     def _append_eval(cls, rs1, rs2):
@@ -343,6 +345,8 @@ class GenEval:
                 abbrs.append('EM-E')
             elif metric == 'EntityMatchNLI':
                 abbrs.append('EM-N')
+            elif metric == 'CheXbert':
+                abbrs.append('CXB')
             else:
                 abbrs.append(metric)
         if len(metrics) == 1:
@@ -369,10 +373,10 @@ class GenEval:
     def full_metrics(cls):
         nli_compare = [SimpleNLI.COMPARE_DOC, SimpleNLI.COMPARE_BERT_SCORE, SimpleNLI.COMPARE_BERT_SCORE_FIX_THRESH,
                        SimpleNLI.COMPARE_TFIDF, SimpleNLI.COMPARE_ALL]
-        return cls.get_metrics(True, True, True, True, True, True, True, nli_compare)
+        return cls.get_metrics(True, True, True, True, True, True, True, nli_compare, True)
 
     @classmethod
-    def get_metrics(cls, bleu, rouge, cider, spice, bert_score, nli, entity_match, nli_compare):
+    def get_metrics(cls, bleu, rouge, cider, spice, bert_score, nli, entity_match, nli_compare, chexbert):
         m = {}
         if bleu:
             idx = len(m)
@@ -391,6 +395,8 @@ class GenEval:
             m[idx] = 'BERTScoreP'
             m[idx + 1] = 'BERTScoreR'
             m[idx + 2] = 'BERTScoreF'
+        if chexbert:
+            m[len(m)] = 'CheXbert'
         if nli is not None:
             if SimpleNLI.COMPARE_DOC in nli_compare:
                 idx = len(m)
@@ -438,6 +444,8 @@ class GenEval:
             self.bert_score_model = None
         if self.entity_matcher is not None:
             self.entity_matcher = None
+        if self.chexbert_model is not None:
+            self.chexbert_model = None
 
     def cuda(self):
         self.device = 'gpu'
@@ -447,6 +455,8 @@ class GenEval:
             self.bert_score_model = self.bert_score_model.cuda()
         if self.entity_matcher is not None:
             self.entity_matcher = self.entity_matcher.cuda()
+        if self.chexbert_model is not None:
+            self.chexbert_model = self.chexbert_model.cuda()
         return self
 
     def eval(self, ids, refs, hypos, tfidf_vectorizer=None, ref_ids=None):
@@ -477,6 +487,17 @@ class GenEval:
             sp, sps = spice.compute_score(refs, hypos)
             sps = list(map(lambda v: v['All']['f'], sps))
             scores.append(sp)
+            scores_detailed.append(sps)
+        # CheXbert
+        if self.chexbert_model is not None:
+            hypos_l, refs_l = [], []
+            for rid in ids:
+                hypo = hypos[rid][0]
+                hypos_l.append(hypo)
+                ref = refs[rid][0]
+                refs_l.append(ref)
+            score, sps = self.chexbert_model.reward(hypos_l, refs_l)
+            scores.append(score)
             scores_detailed.append(sps)
         # BERTScore
         if self.bert_score_model is not None:
@@ -710,7 +731,7 @@ class GenEval:
 
     def metrics(self):
         return self.get_metrics(self.bleu, self.rouge, self.cider, self.spice, self.bert_score, self.nli,
-                                self.entity_match, self.nli_compare)
+                                self.entity_match, self.nli_compare, self.chexbert)
 
     def setup(self):
         if self.nli == self.NLI_MED or self.nli == self.NLI_RAD_AUG:
@@ -749,3 +770,6 @@ class GenEval:
             sentences, entities = EntityMatcher.load_entities(self.entity_match, target_types)
             self.entity_matcher = EntityMatcher(sentences, entities, target_types, self.entity_mode, self.nli_batch,
                                                 nli_model)
+        
+        if self.chexbert:
+            self.chexbert_model = CheXbertScorer()

@@ -44,7 +44,7 @@ class _Image2Text(torch.nn.Module):
                                      nli_batch=rl_opts.nli_batch, nli_cache=self.NLI_CACHE,
                                      entity_match=rl_opts.entity_match, entity_mode=rl_opts.entity_mode,
                                      nthreads=rl_opts.nthreads, pin_memory=rl_opts.pin_memory, sentsplitter='nltk',
-                                     verbose=verbose)
+                                     verbose=verbose, chexbert=rl_opts.chexbert)
             self.evaluator.setup()
             self.eval_idxs = []
             for idx, name in self.evaluator.metrics().items():
@@ -570,7 +570,8 @@ class _Image2Text(torch.nn.Module):
             for i, idx in enumerate(self.eval_idxs):
                 scores = np.array(scores_detailed[idx])
                 # Calculate a mean reward difference between samples and greedy-decodes
-                reward = scores[:len(gens_sample)] - scores[len(gens_sample):]
+#                 reward = scores[:len(gens_sample)] - scores[len(gens_sample):]
+                reward = scores[:len(gens_sample)] - scores[len(gens_sample):len(gens_sample)*2]
                 rewards.append(reward.mean())
                 loss = -log_probs.new_tensor(reward) * log_probs
                 # Multiply a corresponding RL weight (Note that index 0 is an NLL weight)

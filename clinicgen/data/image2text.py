@@ -133,6 +133,7 @@ class _CaptioningData(data.Dataset):
 
     def __len__(self):
         return len(self.samples)
+#         return min(len(self.samples), 30000)
 
     def __repr__(self):
         fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'

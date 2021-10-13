@@ -4,6 +4,7 @@
 from clinicgen.models.cnnrnnrnn import CNNRNNRNN
 from clinicgen.models.kwl import KnowingWhenToLook
 from clinicgen.models.m2transformer import M2Transformer
+from clinicgen.models.m2multi import M2MultiTransformer
 from clinicgen.models.sat import ShowAttendAndTell
 from clinicgen.models.tienet import TieNet
 from clinicgen.models.transformer import TransformerCaptioner, TransformerSimpleCaptioner
@@ -36,6 +37,13 @@ class Models:
                                       device=device, verbose=verbose)
         elif name == 'm2trans':
             model = M2Transformer(embeddings, feat_dim=hidden_size, max_word=max_word, multi_image=multi_image,
+                                  layer_norm=trans_layer_norm, num_enc_layers=trans_enc_layers,
+                                  num_dec_layers=trans_layers, num_memory=m2_memory, teacher_forcing=teacher_forcing,
+                                  image_model=image_model, image_pretrained=image_pretrained,
+                                  finetune_image=finetune_image, image_finetune_epoch=image_finetune_epoch,
+                                  rl_opts=rl_opts, word_idxs=word_idxs, device=device, verbose=verbose)
+        elif name == 'm2multi':
+            model = M2MultiTransformer(embeddings, feat_dim=hidden_size, max_word=max_word, multi_image=multi_image,
                                   layer_norm=trans_layer_norm, num_enc_layers=trans_enc_layers,
                                   num_dec_layers=trans_layers, num_memory=m2_memory, teacher_forcing=teacher_forcing,
                                   image_model=image_model, image_pretrained=image_pretrained,
@@ -102,7 +110,7 @@ class RLOptions:
 
         # Self-critical RL metrics
         self.rl_train = False
-        self.bleu, self.rouge, self.cider, self.spice, self.bert_score = False, False, False, False, None
+        self.bleu, self.rouge, self.cider, self.spice, self.bert_score, self.chexbert = False, False, False, False, None, False
         self.nli_compare = []
         self.entity_match, self.entity_mode = None, None
         if metrics is not None:
@@ -137,5 +145,7 @@ class RLOptions:
                 elif metric == 'EntityMatchNLI':
                     self.entity_match = entity_match
                     self.entity_mode = entity_mode
+                elif metric == 'CheXbert':
+                    self.chexbert = True
                 else:
                     raise ValueError('Unknown RL metric {0}'.format(metric))

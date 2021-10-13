@@ -210,7 +210,7 @@ def parse_args():
     parser.add_argument('--m2-memory', type=int, default=40, help='M2 Transformer memory size')
     parser.add_argument('--max-sent', type=int, default=1, help='Max sentence num')
     parser.add_argument('--max-word', type=int, default=128, help='Max word num')
-    parser.add_argument('--model', type=str, default='m2trans', choices=['cnnrnnrnn', 'kwl', 'm2trans', 'sat', 'tienet', 'trans', 'trans-s'])
+    parser.add_argument('--model', type=str, default='m2trans', choices=['cnnrnnrnn', 'kwl', 'm2trans', 'm2multi', 'sat', 'tienet', 'trans', 'trans-s'])
     parser.add_argument('--model-save', type=str, default=None, help='A model save path')
     parser.add_argument('--multi-image', type=int, default=3, help='Multi image number')
     parser.add_argument('--multi-merge', type=str, default='max', choices=['att', 'max'], help='A merge method for multi images')

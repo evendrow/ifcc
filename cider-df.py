@@ -21,7 +21,8 @@ def main(args):
 
     texts = []
     if args.corpus == 'mimic-cxr':
-        path = os.path.join(args.data, 'mimic-cxr-resized', '2.0.0', MIMICCXRData.SPLITS_PATH)
+        #path = os.path.join(args.data, 'mimic-cxr-resized', '2.0.0', MIMICCXRData.SPLITS_PATH)
+        path = os.path.join(args.data, 'mimic-cxr-jpg', '2.0.0', MIMICCXRData.SPLITS_PATH)
         train_ids = {}
         with gzip.open(path, 'rt', encoding='utf-8') as f:
             header = f.readline()
@@ -29,7 +30,8 @@ def main(args):
             for row in reader:
                 if row[3] == 'train':
                     train_ids['s' + row[1]] = True
-        path = os.path.join(args.data, 'mimic-cxr-resized', '2.0.0', MIMICCXRData.SECTIONED_PATH)
+        #path = os.path.join(args.data, 'mimic-cxr-resized', '2.0.0', MIMICCXRData.SECTIONED_PATH)
+        path = os.path.join(args.data, 'mimic-cxr-jpg', '2.0.0', MIMICCXRData.SECTIONED_PATH)
         with gzip.open(path, 'rt', encoding='utf-8') as f:
             header = f.readline()
             reader = csv.reader(f)

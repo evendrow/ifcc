@@ -25,7 +25,7 @@ def main(args):
     # Extract texts
     texts = []
     if args.corpus == 'mimic-cxr':
-        path = os.path.join(args.data, 'files', 'mimic-cxr-resized', '2.0.0', MIMICCXRData.SECTIONED_PATH)
+        path = os.path.join(args.data, 'files', 'mimic-cxr-jpg', '2.0.0', MIMICCXRData.SECTIONED_PATH)
         with gzip.open(path, 'rt', encoding='utf-8') as f:
             header = f.readline()
             reader = csv.reader(f)
